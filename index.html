@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="">
+  <meta name="author" content="Kingpins">
+
+  <title>Thinkathon 19</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom fonts for this template -->
+  <link href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Lato:100,100i,300,300i,400,400i,700,700i,900,900i" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link href="css/one-page-wonder.min.css" rel="stylesheet">
+    <style>
+    #map {
+        height: 100%;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #ececec;
+      }
+      .page-container{
+        margin-top:100px;
+        width:100%;
+        height: 600px;
+      }
+      .map-wrapper{
+        height: 550px; 
+      }
+
+      ul{
+        list-style-type: none;
+      }
+
+      .locations li{
+        padding: 7px 10px 7px 20px;
+        font-size: 1.1em;
+        font-family: catamaran;
+        background: #fff;
+        color: #6a6a6a;
+        box-shadow: 0 0 10px rgba(0,0,0, .20);
+        margin: 15px 0px;
+        border-radius: 5px;
+      }
+      .locations-header {
+        text-align: center;
+        color: #202020;
+        font-family: catamaran;
+        font-weight: 500;
+        font-size: 1.4em
+      }
+      .navbar{
+        background: #fff;
+        box-shadow: 5px 5px 10px rgba(0,0,0, .20); 
+      }
+      .navbar-brand,.navbar-dark .navbar-brand{
+        color: #1df516; 
+      }
+      .locations-wrapper, .results{
+        margin-top: 20px; 
+      }
+      
+      .result-path{
+
+        background: #fff;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0, .20);      
+      }
+
+      .color-secondary{
+        color: #0c7657
+      }
+
+    </style>
+</head>
+
+<body>
+
+  <!-- Navigation -->
+   <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="#"><span class="color-secondary">The Kingpins</span> @ Thinkathon 19</a>
+    </div>
+  </nav>
+
+  <div class="page-container container">
+    <div class="row">
+      <div class="col-md-8 map-wrapper">
+        <div id="map"></div>
+      </div>
+      <div class="col-md-4">
+        <div class="locations-wrapper">
+          <p class="locations-header">Selected Locations</p>
+          <ol class="locations" id="locations" type="A">
+          </ol>
+          <div class="text-center">
+            <button type="button" class="btn btn-outline-success calculate">SHOW PATH</button>&nbsp;&nbsp;
+            <button type="button" class="btn btn-outline-danger deleteAll">DELETE MARKERS</button>
+          </div>
+      
+        </div>
+
+        <div class="results" style="display:none">
+            <p class="locations-header">Results</p>
+            <div class="result-path text-center">
+              
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script> 
+
+    var markers = [];
+
+
+      function numToSSColumn(num){
+        var s = '', t;       
+        while (num > 0) {
+            t = (num - 1) % 26;
+            s = String.fromCharCode(66 + t) + s;
+            num = (num - t)/26 | 0;
+        }
+        return s || 'A';
+        }
+
+        function deleteMarkers() {
+          clearMarkers();
+          coords = [];
+          markers = [];
+          document.getElementById('locations').innerHTML="";
+          $(".results").fadeOut(1000);
+        }
+        
+        // Sets the map on all markers in the array.
+      function setMapOnAll(map) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(map);
+        }
+      }
+
+      // Removes the markers from the map, but keeps them in the array.
+      function clearMarkers() {
+        setMapOnAll(null);
+      }
+
+      // Shows any markers currently in the array.
+      function showMarkers() {
+        setMapOnAll(map);
+      }
+
+        $(".deleteAll").click(function(e){
+          deleteMarkers();
+        });
+      
+        $(".calculate").click(function(e){
+            e.preventDefault();
+            
+            $.ajax({
+                url: "http://localhost:3000/solveTsp",
+                type: 'GET',
+                cache: false,
+                processData: false,
+                success: function(response) {
+                    data = response.split('[',).join('').split(']',).join('');
+                    var final_route_index = data.split(",").map(Number);
+                    var final_route = "";
+                    for(var i=0; i<final_route_index.length;i++){
+                        var r = numToSSColumn(final_route_index[i]);
+                        final_route = final_route + r + " --> "
+                    }
+                    final_route = final_route.slice(0, -5);
+                    $(".results").fadeIn(1000);
+                    $(".result-path").html(final_route);              
+                }
+                });            
+        });
+
+        var map;
+        function storeCoordinate(xVal, yVal, array) {
+            var location = new google.maps.LatLng(xVal, yVal)
+            array.push(location);
+        }
+
+        var coords = [];
+        function initMap() {
+          var myLatLng = {lat: 13.0827, lng: 80.2707};
+  
+          var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 11,
+            center: myLatLng,
+            disableDoubleClickZoom: true, 
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+          });
+  
+          // var marker = new google.maps.Marker({
+          //   position: myLatLng,
+          //   map: map,
+          //   title: 'You are here'
+          // });
+
+        google.maps.event.addListener(map,'dblclick',function(event) {
+              var marker = new google.maps.Marker({
+                position: event.latLng, 
+                map: map, 
+                title: event.latLng.lat()+', '+event.latLng.lng()
+              });
+                storeCoordinate(event.latLng.lat(), event.latLng.lng(), coords); 
+                markers.push(marker);
+                let ol = document.getElementById('locations');
+                let li = document.createElement('li');
+                ol.appendChild(li);
+                li.className += "point"
+                li.innerHTML += event.latLng.lat() +", "+event.latLng.lng();
+                console.log(coords)           
+          });
+
+            var service = new google.maps.DistanceMatrixService();
+            service.getDistanceMatrix(
+              {
+                origins: coords,
+                destinations: coords,
+                travelMode: 'DRIVING',
+                avoidHighways: false,
+                avoidTolls: false,
+              }, callback);
+
+            function callback(response, status) {
+              // See Parsing the Results for
+              // the basics of a callback function.
+              console.log(response)
+            }
+}
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALwq8dchjUeUybDfWkxyo2c1zXZYRDd3Y&callback=initMap">
+    </script>
+</body>
+
+</html>
